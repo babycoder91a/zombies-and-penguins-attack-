@@ -1,0 +1,364 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Penguin Zombie Hunt Game</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+  body {
+    margin: 0;
+    background: linear-gradient(135deg, #005f73, #0a9396);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Press Start 2P', cursive;
+    user-select: none;
+  }
+  #game-container {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    background: linear-gradient(180deg, #94d2bd, #e9d8a6);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  #scoreboard {
+    position: absolute;
+    top: 10px;
+    left: 20px;
+    color: #0a0a0a;
+    font-size: 24px;
+    text-shadow: 1px 1px 2px #fff;
+    z-index: 1000;
+  }
+  #timer {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    color: #0a0a0a;
+    font-size: 24px;
+    text-shadow: 1px 1px 2px #fff;
+    z-index: 1000;
+  }
+  #penguin {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    background: #00b4d8;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    box-shadow:
+      inset 0 -12px 0 2px #fff, 
+      inset 0 0 0 20px #023e8a;
+    cursor: default;
+    transition: box-shadow 0.2s;
+  }
+  #penguin::before {
+    content: '';
+    position: absolute;
+    top: 22px;
+    left: 10px;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 35px 0 #fff;
+  }
+  #penguin::after {
+    content: '';
+    position: absolute;
+    top: 32px;
+    left: 24px;
+    width: 16px;
+    height: 12px;
+    background: #ffb703;
+    border-radius: 10px 10px 0 0;
+  }
+  #penguin.hunting {
+    box-shadow:
+      inset 0 -15px 0 3px #fff,
+      0 0 12px 4px #90e0ef;
+  }
+  .zombie {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: #6a994e;
+    border-radius: 50% / 40% 40% 60% 60%;
+    box-shadow: inset 0 -8px 0 2px #52734d;
+    cursor: pointer;
+    transition: transform 0.2s;
+    user-select: none;
+  }
+  .zombie::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 8px;
+    width: 10px;
+    height: 10px;
+    background: #ffe066;
+    border-radius: 50%;
+    box-shadow: 25px 0 #ffe066;
+  }
+  .zombie::after {
+    content: '';
+    position: absolute;
+    bottom: 8px;
+    left: 20px;
+    width: 10px;
+    height: 12px;
+    background: #483d8b;
+    border-radius: 3px;
+  }
+  #game-over {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    text-shadow: 2px 2px 8px #000;
+    font-size: 64px;
+    font-weight: 900;
+    background: rgba(58, 28, 102, 0.75);
+    padding: 30px 40px;
+    border-radius: 30px;
+    display: none;
+    text-align: center;
+    z-index: 2000;
+  }
+  #game-over button {
+    margin-top: 20px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 18px;
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: none;
+    background: #90e0ef;
+    color: #000;
+    cursor: pointer;
+    box-shadow: 0 0 10px #90e0ef;
+    transition: background-color 0.3s;
+  }
+  #game-over button:hover {
+    background-color: #00b4d8;
+    color: white;
+    box-shadow: 0 0 15px #00b4d8;
+  }
+</style>
+</head>
+<body>
+  <div id="game-container" tabindex="0" aria-label="Penguin Zombie Hunt game area">
+    <div id="scoreboard">Score: 0</div>
+    <div id="timer">Time: 30</div>
+    <div id="penguin" aria-label="Player controlled penguin" role="img"></div>
+    <div id="game-over" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+      <div id="game-over-title">Game Over!</div>
+      <div id="final-score"></div>
+      <button id="restart-btn">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const gameContainer = document.getElementById('game-container');
+      const penguin = document.getElementById('penguin');
+      const scoreboard = document.getElementById('scoreboard');
+      const timerEl = document.getElementById('timer');
+      const gameOverEl = document.getElementById('game-over');
+      const finalScoreEl = document.getElementById('final-score');
+      const restartBtn = document.getElementById('restart-btn');
+
+      const gameWidth = gameContainer.clientWidth;
+      const gameHeight = gameContainer.clientHeight;
+      const penguinSize = 64;
+      const zombieSize = 50;
+      const maxZombies = 7;
+      let zombies = [];
+      let score = 0;
+      let timeLeft = 30;
+      let gameInterval = null;
+      let timerInterval = null;
+      let penguinPos = { x: gameWidth/2 - penguinSize/2, y: gameHeight/2 - penguinSize/2 };
+      let keysPressed = {};
+      let gameRunning = false;
+
+      // Create a zombie element and add to game
+      function createZombie() {
+        const zombie = document.createElement('div');
+        zombie.classList.add('zombie');
+        positionZombie(zombie);
+        zombie.tabIndex = 0;  // for keyboard focus
+        zombie.setAttribute('aria-label', 'Zombie');
+        zombie.setAttribute('role', 'img');
+        gameContainer.appendChild(zombie);
+
+        zombie.addEventListener('click', () => {
+          if (!gameRunning) return;
+          removeZombie(zombie);
+          incrementScore();
+        });
+        return zombie;
+      }
+
+      // Position a zombie randomly inside the game area without overlapping penguin
+      function positionZombie(zombie) {
+        let x, y, attempts = 0;
+        do {
+          x = Math.random() * (gameWidth - zombieSize);
+          y = Math.random() * (gameHeight - zombieSize);
+          attempts++;
+          if (attempts > 100) break; // avoid infinite loops
+        } while (isColliding(x, y, zombieSize, zombieSize, penguinPos.x, penguinPos.y, penguinSize, penguinSize));
+
+        zombie.style.left = x + 'px';
+        zombie.style.top = y + 'px';
+      }
+
+      // Check collision between two rectangles
+      function isColliding(x1, y1, w1, h1, x2, y2, w2, h2) {
+        return !(x2 > x1 + w1 || x2 + w2 < x1 || y2 > y1 + h1 || y2 + h2 < y1);
+      }
+
+      // Remove zombie from DOM and array
+      function removeZombie(zombie) {
+        gameContainer.removeChild(zombie);
+        zombies = zombies.filter(z => z !== zombie);
+      }
+
+      // Increment score and update display
+      function incrementScore() {
+        score++;
+        scoreboard.textContent = `Score: ${score}`;
+        penguin.classList.add('hunting');
+        setTimeout(() => penguin.classList.remove('hunting'), 150);
+      }
+
+      // Move penguin based on keysPressed
+      function movePenguin() {
+        if (!gameRunning) return;
+        const speed = 6;
+        let dx = 0;
+        let dy = 0;
+        if (keysPressed['ArrowUp'] || keysPressed['w']) dy -= speed;
+        if (keysPressed['ArrowDown'] || keysPressed['s']) dy += speed;
+        if (keysPressed['ArrowLeft'] || keysPressed['a']) dx -= speed;
+        if (keysPressed['ArrowRight'] || keysPressed['d']) dx += speed;
+
+        let newX = penguinPos.x + dx;
+        let newY = penguinPos.y + dy;
+
+        // Boundaries check
+        newX = Math.min(Math.max(0, newX), gameWidth - penguinSize);
+        newY = Math.min(Math.max(0, newY), gameHeight - penguinSize);
+
+        penguinPos.x = newX;
+        penguinPos.y = newY;
+        penguin.style.left = `${newX}px`;
+        penguin.style.top = `${newY}px`;
+
+        checkPenguinZombieCollision();
+      }
+
+      // Check if penguin collides with any zombies
+      function checkPenguinZombieCollision() {
+        for (const zombie of zombies) {
+          const zx = parseFloat(zombie.style.left);
+          const zy = parseFloat(zombie.style.top);
+          if (isColliding(penguinPos.x, penguinPos.y, penguinSize, penguinSize, zx, zy, zombieSize, zombieSize)) {
+            removeZombie(zombie);
+            incrementScore();
+          }
+        }
+      }
+
+      // Game tick: move penguin and maybe zombies
+      function gameTick() {
+        movePenguin();
+        // Optional: zombies could move randomly (simple movement)
+        zombies.forEach(zombie => {
+          const moveChance = Math.random();
+          if (moveChance < 0.3) {
+            const zx = parseFloat(zombie.style.left);
+            const zy = parseFloat(zombie.style.top);
+            const dx = (Math.random() - 0.5) * 10;
+            const dy = (Math.random() - 0.5) * 10;
+            let newX = Math.min(Math.max(0, zx + dx), gameWidth - zombieSize);
+            let newY = Math.min(Math.max(0, zy + dy), gameHeight - zombieSize);
+            zombie.style.left = `${newX}px`;
+            zombie.style.top = `${newY}px`;
+          }
+        });
+      }
+
+      // Spawn zombies to maintain max number on screen
+      function spawnZombies() {
+        while (zombies.length < maxZombies) {
+          const zombie = createZombie();
+          zombies.push(zombie);
+        }
+      }
+
+      // Game timer
+      function startTimer() {
+        timeLeft = 30;
+        timerEl.textContent = `Time: ${timeLeft}`;
+        timerInterval = setInterval(() => {
+          timeLeft--;
+          timerEl.textContent = `Time: ${timeLeft}`;
+          if (timeLeft <= 0) {
+            endGame();
+          }
+        }, 1000);
+      }
+
+      // Start the game
+      function startGame() {
+        score = 0;
+        scoreboard.textContent = `Score: ${score}`;
+        penguinPos = { x: gameWidth/2 - penguinSize/2, y: gameHeight/2 - penguinSize/2 };
+        penguin.style.left = `${penguinPos.x}px`;
+        penguin.style.top = `${penguinPos.y}px`;
+        zombies.forEach(zombie => gameContainer.removeChild(zombie));
+        zombies = [];
+        spawnZombies();
+        gameRunning = true;
+        gameOverEl.style.display = 'none';
+        startTimer();
+        if (gameInterval) clearInterval(gameInterval);
+        gameInterval = setInterval(gameTick, 50);
+        gameContainer.focus();
+      }
+
+      // End the game
+      function endGame() {
+        gameRunning = false;
+        clearInterval(timerInterval);
+        clearInterval(gameInterval);
+        gameOverEl.style.display = 'block';
+        finalScoreEl.textContent = `Your score: ${score}`;
+      }
+
+      // Handle key down/up events
+      function handleKeyDown(e) {
+        keysPressed[e.key] = true;
+      }
+      function handleKeyUp(e) {
+        keysPressed[e.key] = false;
+      }
+
+      restartBtn.addEventListener('click', startGame);
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+
+      // Start game on initial load
+      startGame();
+
+    })();
+  </script>
+</body>
+</html>
+
