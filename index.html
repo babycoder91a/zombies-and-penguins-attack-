@@ -87,16 +87,9 @@
       color: #555;
     }
 
-    /* Animation for Bubbles */
     @keyframes bubble {
-      0% {
-        transform: translateY(0) scale(0.5);
-        opacity: 1;
-      }
-      100% {
-        transform: translateY(-200px) scale(1);
-        opacity: 0;
-      }
+      0% { transform: translateY(0) scale(0.5); opacity: 1; }
+      100% { transform: translateY(-200px) scale(1); opacity: 0; }
     }
 
     .bubble {
@@ -107,27 +100,16 @@
       pointer-events: none;
     }
 
-    /* Multiple bubble sizes and positions */
     .bubble:nth-child(1) { width: 30px; height: 30px; top: 10%; left: 20%; animation-duration: 3s; }
     .bubble:nth-child(2) { width: 40px; height: 40px; top: 40%; left: 60%; animation-duration: 4s; }
     .bubble:nth-child(3) { width: 50px; height: 50px; top: 70%; left: 10%; animation-duration: 6s; }
     .bubble:nth-child(4) { width: 35px; height: 35px; top: 80%; left: 80%; animation-duration: 2s; }
     .bubble:nth-child(5) { width: 60px; height: 60px; top: 20%; left: 50%; animation-duration: 5s; }
 
-    /* Sparkles */
     @keyframes sparkle {
-      0% {
-        transform: scale(1);
-        opacity: 1;
-      }
-      50% {
-        transform: scale(1.2);
-        opacity: 0.5;
-      }
-      100% {
-        transform: scale(1);
-        opacity: 1;
-      }
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
     }
 
     .sparkle {
@@ -140,14 +122,12 @@
       pointer-events: none;
     }
 
-    /* Multiple sparkle positions */
     .sparkle:nth-child(1) { top: 10%; left: 30%; animation-duration: 1.5s; }
     .sparkle:nth-child(2) { top: 25%; left: 50%; animation-duration: 2s; }
     .sparkle:nth-child(3) { top: 40%; left: 80%; animation-duration: 1s; }
     .sparkle:nth-child(4) { top: 60%; left: 10%; animation-duration: 3s; }
     .sparkle:nth-child(5) { top: 70%; left: 60%; animation-duration: 2.5s; }
 
-    /* Footer Style */
     footer {
       position: absolute;
       bottom: 10px;
@@ -178,7 +158,6 @@
     <h1>Dictionary App</h1>
     <input type="text" id="searchWord" placeholder="Search for a word..." />
     <button id="searchButton">Search</button>
-
     <div id="resultContainer" class="results"></div>
   </div>
 
@@ -187,10 +166,17 @@
   </footer>
 
   <script>
-    const API_KEY = "your_api_key_here"; // Replace with your actual API key
+    const API_KEY = "16f7c477d4dao63td086a628b0b233a9";
     const searchButton = document.getElementById("searchButton");
     const searchWord = document.getElementById("searchWord");
     const resultContainer = document.getElementById("resultContainer");
+
+    // Enable Enter key as trigger
+    searchWord.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        searchButton.click();
+      }
+    });
 
     searchButton.addEventListener("click", async () => {
       const word = searchWord.value.trim();
@@ -204,12 +190,12 @@
 
       try {
         const response = await fetch(`https://api.shecodes.io/dictionary/v1/define?word=${word}&key=${API_KEY}`);
-
         if (!response.ok) {
           throw new Error("Word not found or invalid request.");
         }
 
         const data = await response.json();
+        console.log(data); // For debugging
 
         if (data.definitions && data.definitions.length > 0) {
           const definition = data.definitions[0].definition;
@@ -233,12 +219,10 @@
       const sparkle = document.createElement("div");
       sparkle.classList.add("sparkle");
       document.body.appendChild(sparkle);
-
-      // Randomize positions
       sparkle.style.top = `${Math.random() * 100}%`;
       sparkle.style.left = `${Math.random() * 100}%`;
     }
   </script>
-
 </body>
 </html>
+
